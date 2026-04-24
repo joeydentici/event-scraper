@@ -1,0 +1,27 @@
+# Env
+.env
+.env.local
+.env.*.local
+*.env
+
+# Node
+node_modules
+.next
+out
+dist
+.vercel
+
+# Python
+__pycache__/
+*.py[cod]
+.venv
+venv
+*.egg-info
+.pytest_cache
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+.tasks
