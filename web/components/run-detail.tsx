@@ -78,42 +78,45 @@ export function RunDetail({ runId, initialRun, initialEvents }: Props) {
       )}
 
       {run.status === "complete" && (
-        <>
+        <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Tier 1" value={run.tier_1_count ?? tier1.length} tone="hot" />
             <Stat label="Tier 2" value={run.tier_2_count ?? tier2.length} tone="warm" />
             <Stat label="Tier 3" value={run.tier_3_count ?? tier3.length} tone="cold" />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-zinc-500">Download CSV:</span>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">Export CSV</span>
             <DownloadBtn runId={runId} tiers="1" label="Tier 1" />
             <DownloadBtn runId={runId} tiers="2" label="Tier 2" />
             <DownloadBtn runId={runId} tiers="1,2" label="Tier 1 + 2" emphasized />
             <DownloadBtn runId={runId} tiers="3" label="Tier 3" />
             <DownloadBtn runId={runId} tiers="1,2,3" label="All" />
           </div>
-        </>
+        </div>
       )}
 
       <section>
-        <h2 className="mb-2 text-lg font-semibold">Worker log</h2>
-        <pre className="max-h-64 overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        <h2 className="mb-2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Worker log</h2>
+        <pre className="max-h-56 overflow-auto rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 font-mono text-xs leading-relaxed text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300">
           {run.log || "(no log yet)"}
         </pre>
       </section>
 
-      <section className="space-y-6">
+      <section className="space-y-8">
         <EventsTable title="Tier 1 — Hot" events={tier1} tone="hot" />
         <EventsTable title="Tier 2 — Workable" events={tier2} tone="warm" />
         {unscored.length > 0 && <EventsTable title="Pending scoring" events={unscored} tone="pending" />}
-        <details>
-          <summary className="cursor-pointer text-sm text-zinc-500">
-            Show tier 3 ({tier3.length})
-          </summary>
-          <div className="mt-3">
-            <EventsTable title="" events={tier3} tone="cold" />
-          </div>
-        </details>
+        {tier3.length > 0 && (
+          <details className="group">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+              <span className="inline-block transition-transform group-open:rotate-90">›</span>
+              Tier 3 — Unqualified ({tier3.length})
+            </summary>
+            <div className="mt-4">
+              <EventsTable title="" events={tier3} tone="cold" />
+            </div>
+          </details>
+        )}
       </section>
     </div>
   );
@@ -135,65 +138,116 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: "hot
 
 function EventsTable({ title, events, tone }: { title: string; events: EventRow[]; tone: "hot" | "warm" | "cold" | "pending" }) {
   if (!events.length) return null;
-  const borderColor = {
-    hot: "border-emerald-300",
-    warm: "border-amber-300",
-    cold: "border-zinc-200",
-    pending: "border-blue-300",
+  const accent = {
+    hot: "bg-emerald-500",
+    warm: "bg-amber-500",
+    cold: "bg-zinc-300 dark:bg-zinc-600",
+    pending: "bg-blue-500",
   }[tone];
+
   return (
-    <div>
-      {title && <h3 className="mb-2 text-base font-semibold">{title}</h3>}
-      <div className={`overflow-x-auto rounded-xl border ${borderColor} bg-white shadow-sm dark:bg-zinc-900`}>
-        <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-950">
+    <section>
+      {title && (
+        <div className="mb-3 flex items-baseline gap-2.5">
+          <span className={`h-4 w-1 rounded-full ${accent}`} aria-hidden />
+          <h3 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h3>
+          <span className="text-xs text-zinc-500">{events.length}</span>
+        </div>
+      )}
+      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[38%]" />
+            <col className="w-[16%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
+            <col className="w-[20%]" />
+          </colgroup>
+          <thead className="border-b border-zinc-200 bg-zinc-50/60 text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/60">
             <tr>
-              <th className="px-3 py-2">Event</th>
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Location</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2">Size</th>
-              <th className="px-3 py-2">Organizer</th>
-              <th className="px-3 py-2">Why</th>
-              <th className="px-3 py-2">Source</th>
+              <th className="px-3 py-2.5 font-medium">Event</th>
+              <th className="px-3 py-2.5 font-medium">Date</th>
+              <th className="px-3 py-2.5 font-medium">Location</th>
+              <th className="px-3 py-2.5 font-medium">Format</th>
+              <th className="px-3 py-2.5 font-medium">Why</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {events.map((e) => (
-              <tr key={e.id} className="border-t border-zinc-100 align-top dark:border-zinc-800">
-                <td className="px-3 py-2">
-                  {e.event_url ? (
-                    <a href={e.event_url} target="_blank" rel="noopener noreferrer" className="font-medium text-zinc-900 underline dark:text-zinc-100">
-                      {e.event_name}
-                    </a>
-                  ) : (
-                    <span className="font-medium">{e.event_name}</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{e.event_date ?? "—"}</td>
-                <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{e.location ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-zinc-500">
-                  <div>{e.event_type ?? "—"}</div>
-                  {e.is_virtual && <div className="text-[10px] uppercase tracking-wide text-blue-600">virtual/hybrid</div>}
-                </td>
-                <td className="px-3 py-2 text-xs tabular-nums text-zinc-500">{e.estimated_size ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-zinc-500">
-                  {e.organizer_website ? (
-                    <a href={e.organizer_website} target="_blank" rel="noopener noreferrer" className="underline">
-                      {e.organizer_name ?? e.organizer_website}
-                    </a>
-                  ) : (
-                    e.organizer_name ?? "—"
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-zinc-500">{e.score_rationale ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-zinc-500">{e.source ?? "—"}</td>
-              </tr>
+              <EventRowView key={e.id} ev={e} />
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
+  );
+}
+
+function EventRowView({ ev: e }: { ev: EventRow }) {
+  const orgLabel = e.organizer_name ?? e.organizer_website?.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return (
+    <tr className="align-top transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-950/60">
+      <td className="px-3 py-3">
+        <div className="min-w-0 space-y-1">
+          {e.event_url ? (
+            <a
+              href={e.event_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="line-clamp-2 font-medium leading-snug text-zinc-900 hover:underline dark:text-zinc-100"
+              title={e.event_name ?? undefined}
+            >
+              {e.event_name}
+            </a>
+          ) : (
+            <span className="line-clamp-2 font-medium leading-snug" title={e.event_name ?? undefined}>
+              {e.event_name}
+            </span>
+          )}
+          {orgLabel && (
+            <div className="truncate text-xs text-zinc-500" title={orgLabel}>
+              {e.organizer_website ? (
+                <a href={e.organizer_website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {orgLabel}
+                </a>
+              ) : (
+                orgLabel
+              )}
+            </div>
+          )}
+          {e.source && (
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              via {e.source}
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-700 dark:text-zinc-300" title={e.event_date ?? undefined}>
+        <span className="line-clamp-2">{e.event_date ?? "—"}</span>
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-700 dark:text-zinc-300" title={e.location ?? undefined}>
+        <span className="line-clamp-2">{e.location ?? "—"}</span>
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="space-y-1">
+          {e.event_type && (
+            <div className="font-medium text-zinc-700 dark:text-zinc-300">{e.event_type}</div>
+          )}
+          {e.estimated_size && (
+            <div className="tabular-nums text-zinc-500 dark:text-zinc-400">{e.estimated_size}</div>
+          )}
+          {e.is_virtual && (
+            <span className="inline-flex rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+              Virtual
+            </span>
+          )}
+          {!e.event_type && !e.estimated_size && !e.is_virtual && <span className="text-zinc-400">—</span>}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400" title={e.score_rationale ?? undefined}>
+        <span className="line-clamp-3">{e.score_rationale ?? "—"}</span>
+      </td>
+    </tr>
   );
 }
 
