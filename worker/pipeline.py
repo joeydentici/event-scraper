@@ -6,8 +6,10 @@ Updates run status/counts at each phase.
 
 from __future__ import annotations
 
+import re
 import sys
 import time
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,42 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from discover_events import parse_input_spec, run_discovery  # type: ignore
 from scoring import score_events
 from supabase_client import get_supabase
+
+
+_ISO_DATE_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+
+
+def _extract_iso_date(ev: dict) -> date | None:
+    """Pull a parseable date from an event. Prefer raw.startDate (10times), fall back to event_date string."""
+    raw = ev.get("raw") or {}
+    candidate = raw.get("startDate") if isinstance(raw, dict) else None
+    if not candidate:
+        candidate = ev.get("event_date")
+    if not isinstance(candidate, str):
+        return None
+    m = _ISO_DATE_RE.search(candidate)
+    if not m:
+        return None
+    try:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+
+
+def _filter_by_start_date(events: list[dict], start_date_str: str) -> list[dict]:
+    try:
+        cutoff = date.fromisoformat(start_date_str)
+    except ValueError:
+        return events
+    kept = []
+    for ev in events:
+        iso = _extract_iso_date(ev)
+        if iso is None:
+            kept.append(ev)  # ambiguous — let Claude decide during scoring
+            continue
+        if iso >= cutoff:
+            kept.append(ev)
+    return kept
 
 
 def _log(run_id: str, line: str) -> None:
@@ -56,6 +94,13 @@ def run_pipeline(run_id: str) -> None:
     elapsed = time.time() - t0
     _log(run_id, f"Discovery complete in {elapsed:.0f}s — {len(events)} unique events")
 
+    # Phase 2.5: structured date filter for sources that ship ISO dates (10times)
+    start_date_str = spec.get("start_date")
+    if start_date_str:
+        before = len(events)
+        events = _filter_by_start_date(events, start_date_str)
+        _log(run_id, f"Date filter (>= {start_date_str}): {before} -> {len(events)}")
+
     _set_status(run_id, "scoring", raw_count=len(events), deduped_count=len(events))
 
     if not events:
@@ -63,10 +108,16 @@ def run_pipeline(run_id: str) -> None:
         _log(run_id, "No events found — finishing.")
         return
 
-    # Phase 3: score (Claude)
+    # Phase 3: score (Claude). Pass start_date so the model marks pre-cutoff
+    # events with score=3 even when only an unstructured date is available.
     _log(run_id, f"Scoring {len(events)} events with Claude...")
     t1 = time.time()
-    scored = score_events(events, spec["client_context"], spec.get("exclusions", []))
+    scored = score_events(
+        events,
+        spec["client_context"],
+        spec.get("exclusions", []),
+        start_date=start_date_str,
+    )
     elapsed = time.time() - t1
     _log(run_id, f"Scoring complete in {elapsed:.0f}s")
 

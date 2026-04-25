@@ -91,6 +91,7 @@ def parse_input_spec(spec: dict) -> dict:
         "sub_topics": spec.get("sub_topics", []),
         "event_types": spec.get("event_types", ["conferences"]),
         "location": location,
+        "start_date": spec.get("start_date"),
         "year": spec.get("year", 2026),
         "target_count": spec.get("target_count", 100),
         "exclusions": spec.get("exclusions", []),

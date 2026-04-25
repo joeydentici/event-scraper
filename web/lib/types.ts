@@ -6,7 +6,8 @@ export type RunSpec = {
   sub_topics?: string[];
   event_types?: string[];
   location: string;
-  year?: number;
+  start_date?: string;       // ISO YYYY-MM-DD — earliest event date
+  year?: number;             // derived from start_date if not provided
   target_count?: number;
   exclusions?: string[];
   skip_sources?: string[];

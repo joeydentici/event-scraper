@@ -78,11 +78,21 @@ export function RunDetail({ runId, initialRun, initialEvents }: Props) {
       )}
 
       {run.status === "complete" && (
-        <div className="grid grid-cols-3 gap-3">
-          <Stat label="Tier 1" value={run.tier_1_count ?? tier1.length} tone="hot" />
-          <Stat label="Tier 2" value={run.tier_2_count ?? tier2.length} tone="warm" />
-          <Stat label="Tier 3" value={run.tier_3_count ?? tier3.length} tone="cold" />
-        </div>
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label="Tier 1" value={run.tier_1_count ?? tier1.length} tone="hot" />
+            <Stat label="Tier 2" value={run.tier_2_count ?? tier2.length} tone="warm" />
+            <Stat label="Tier 3" value={run.tier_3_count ?? tier3.length} tone="cold" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-zinc-500">Download CSV:</span>
+            <DownloadBtn runId={runId} tiers="1" label="Tier 1" />
+            <DownloadBtn runId={runId} tiers="2" label="Tier 2" />
+            <DownloadBtn runId={runId} tiers="1,2" label="Tier 1 + 2" emphasized />
+            <DownloadBtn runId={runId} tiers="3" label="Tier 3" />
+            <DownloadBtn runId={runId} tiers="1,2,3" label="All" />
+          </div>
+        </>
       )}
 
       <section>
@@ -134,21 +144,24 @@ function EventsTable({ title, events, tone }: { title: string; events: EventRow[
   return (
     <div>
       {title && <h3 className="mb-2 text-base font-semibold">{title}</h3>}
-      <div className={`overflow-hidden rounded-xl border ${borderColor} bg-white shadow-sm dark:bg-zinc-900`}>
+      <div className={`overflow-x-auto rounded-xl border ${borderColor} bg-white shadow-sm dark:bg-zinc-900`}>
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-950">
             <tr>
-              <th className="px-4 py-2">Event</th>
-              <th className="px-4 py-2">Date</th>
-              <th className="px-4 py-2">Location</th>
-              <th className="px-4 py-2">Why</th>
-              <th className="px-4 py-2">Source</th>
+              <th className="px-3 py-2">Event</th>
+              <th className="px-3 py-2">Date</th>
+              <th className="px-3 py-2">Location</th>
+              <th className="px-3 py-2">Type</th>
+              <th className="px-3 py-2">Size</th>
+              <th className="px-3 py-2">Organizer</th>
+              <th className="px-3 py-2">Why</th>
+              <th className="px-3 py-2">Source</th>
             </tr>
           </thead>
           <tbody>
             {events.map((e) => (
-              <tr key={e.id} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="px-4 py-2">
+              <tr key={e.id} className="border-t border-zinc-100 align-top dark:border-zinc-800">
+                <td className="px-3 py-2">
                   {e.event_url ? (
                     <a href={e.event_url} target="_blank" rel="noopener noreferrer" className="font-medium text-zinc-900 underline dark:text-zinc-100">
                       {e.event_name}
@@ -157,16 +170,41 @@ function EventsTable({ title, events, tone }: { title: string; events: EventRow[
                     <span className="font-medium">{e.event_name}</span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{e.event_date ?? "—"}</td>
-                <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{e.location ?? "—"}</td>
-                <td className="px-4 py-2 text-xs text-zinc-500">{e.score_rationale ?? "—"}</td>
-                <td className="px-4 py-2 text-xs text-zinc-500">{e.source ?? "—"}</td>
+                <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{e.event_date ?? "—"}</td>
+                <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{e.location ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-zinc-500">
+                  <div>{e.event_type ?? "—"}</div>
+                  {e.is_virtual && <div className="text-[10px] uppercase tracking-wide text-blue-600">virtual/hybrid</div>}
+                </td>
+                <td className="px-3 py-2 text-xs tabular-nums text-zinc-500">{e.estimated_size ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-zinc-500">
+                  {e.organizer_website ? (
+                    <a href={e.organizer_website} target="_blank" rel="noopener noreferrer" className="underline">
+                      {e.organizer_name ?? e.organizer_website}
+                    </a>
+                  ) : (
+                    e.organizer_name ?? "—"
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-zinc-500">{e.score_rationale ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-zinc-500">{e.source ?? "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+function DownloadBtn({ runId, tiers, label, emphasized = false }: { runId: string; tiers: string; label: string; emphasized?: boolean }) {
+  const cls = emphasized
+    ? "rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
+    : "rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
+  return (
+    <a href={`/api/runs/${runId}/csv?tiers=${tiers}`} download className={cls}>
+      {label}
+    </a>
   );
 }
 

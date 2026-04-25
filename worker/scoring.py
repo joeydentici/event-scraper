@@ -48,10 +48,17 @@ Apply user exclusions strictly. If exclusions say "no virtual", anything with vi
 Be honest. Typical split: 10-20% tier 1, 30-40% tier 2, 40-50% tier 3. Don't inflate scores."""
 
 
-def _build_user_message(batch: list[dict], client_context: str, exclusions: list[str]) -> str:
+def _build_user_message(batch: list[dict], client_context: str, exclusions: list[str], start_date: str | None) -> str:
     lines = [
         f"Client context: {client_context}",
         f"Exclusions: {exclusions if exclusions else 'none'}",
+    ]
+    if start_date:
+        lines.append(
+            f"Earliest acceptable event date: {start_date}. Any event you can confidently determine "
+            f"occurs before this date gets score=3 with rationale 'excluded: before {start_date}'."
+        )
+    lines += [
         "",
         "Score these events. Reply with ONLY a JSON array, one object per event in the same order, with these fields:",
         '  {"score": 1|2|3, "score_rationale": "one line", "event_date": "extracted or null", "location": "extracted or null"}',
@@ -70,9 +77,9 @@ def _build_user_message(batch: list[dict], client_context: str, exclusions: list
     return "\n".join(lines)
 
 
-def _score_batch(batch: list[dict], client_context: str, exclusions: list[str]) -> list[dict]:
+def _score_batch(batch: list[dict], client_context: str, exclusions: list[str], start_date: str | None) -> list[dict]:
     """Score one batch. Returns list of {score, rationale, event_date, location} in same order."""
-    user_msg = _build_user_message(batch, client_context, exclusions)
+    user_msg = _build_user_message(batch, client_context, exclusions, start_date)
     client = _get_client()
 
     try:
@@ -109,7 +116,7 @@ def _score_batch(batch: list[dict], client_context: str, exclusions: list[str]) 
     return parsed[:len(batch)]
 
 
-def score_events(events: list[dict], client_context: str, exclusions: list[str]) -> list[dict]:
+def score_events(events: list[dict], client_context: str, exclusions: list[str], start_date: str | None = None) -> list[dict]:
     """Score all events in parallel batches. Returns events with score/rationale merged in."""
     if not events:
         return []
@@ -118,7 +125,7 @@ def score_events(events: list[dict], client_context: str, exclusions: list[str])
     results: list[list[dict]] = [[] for _ in batches]
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(_score_batch, batch, client_context, exclusions): i for i, batch in enumerate(batches)}
+        futures = {executor.submit(_score_batch, batch, client_context, exclusions, start_date): i for i, batch in enumerate(batches)}
         for future in as_completed(futures):
             i = futures[future]
             results[i] = future.result()

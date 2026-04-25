@@ -16,13 +16,16 @@ export function SpecForm() {
 
     const form = e.currentTarget;
     const fd = new FormData(form);
+    const startDate = String(fd.get("start_date") ?? "").trim();
+    const derivedYear = startDate ? Number(startDate.slice(0, 4)) : new Date().getFullYear() + 1;
     const spec: RunSpec = {
       client_context: String(fd.get("client_context") ?? "").trim(),
       industries: String(fd.get("industries") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
       sub_topics: String(fd.get("sub_topics") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
       event_types: String(fd.get("event_types") ?? "conferences").split(",").map((s) => s.trim()).filter(Boolean),
       location: String(fd.get("location") ?? "").trim(),
-      year: Number(fd.get("year") || new Date().getFullYear() + 1),
+      start_date: startDate || undefined,
+      year: derivedYear,
       target_count: Number(fd.get("target_count") || 100),
       exclusions: String(fd.get("exclusions") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     };
@@ -63,7 +66,12 @@ export function SpecForm() {
       </div>
       <div className="grid gap-4 md:grid-cols-4">
         <Field label="Event types" name="event_types" defaultValue="conferences" />
-        <Field label="Year" name="year" type="number" defaultValue={new Date().getFullYear() + 1} />
+        <Field
+          label="Earliest event date"
+          name="start_date"
+          type="date"
+          defaultValue={new Date().toISOString().slice(0, 10)}
+        />
         <Field label="Target count" name="target_count" type="number" defaultValue={100} />
         <Field label="Exclusions" name="exclusions" placeholder="no virtual" />
       </div>
