@@ -154,21 +154,25 @@ function EventsTable({ title, events, tone }: { title: string; events: EventRow[
           <span className="text-xs text-zinc-500">{events.length}</span>
         </div>
       )}
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="w-full table-fixed text-left text-sm">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <table className="w-full min-w-[1080px] table-fixed text-left text-sm">
           <colgroup>
-            <col className="w-[38%]" />
-            <col className="w-[16%]" />
-            <col className="w-[14%]" />
-            <col className="w-[12%]" />
-            <col className="w-[20%]" />
+            <col style={{ width: "28%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "19%" }} />
           </colgroup>
           <thead className="border-b border-zinc-200 bg-zinc-50/60 text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/60">
             <tr>
               <th className="px-3 py-2.5 font-medium">Event</th>
               <th className="px-3 py-2.5 font-medium">Date</th>
               <th className="px-3 py-2.5 font-medium">Location</th>
+              <th className="px-3 py-2.5 font-medium">Industry</th>
               <th className="px-3 py-2.5 font-medium">Format</th>
+              <th className="px-3 py-2.5 font-medium">Size</th>
               <th className="px-3 py-2.5 font-medium">Why</th>
             </tr>
           </thead>
@@ -185,6 +189,7 @@ function EventsTable({ title, events, tone }: { title: string; events: EventRow[
 
 function EventRowView({ ev: e }: { ev: EventRow }) {
   const orgLabel = e.organizer_name ?? e.organizer_website?.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const multiSource = (e.sources?.length ?? 0) > 1;
   return (
     <tr className="align-top transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-950/60">
       <td className="px-3 py-3">
@@ -215,11 +220,26 @@ function EventRowView({ ev: e }: { ev: EventRow }) {
               )}
             </div>
           )}
-          {e.source && (
-            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-              via {e.source}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {e.source && (
+              <span className="inline-flex rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                {e.source}
+              </span>
+            )}
+            {multiSource && (
+              <span
+                className="inline-flex rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                title={`Found in: ${e.sources!.join(", ")}`}
+              >
+                {e.sources!.length}× sources
+              </span>
+            )}
+            {e.dup_count != null && e.dup_count > 1 && !multiSource && (
+              <span className="inline-flex rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                ×{e.dup_count}
+              </span>
+            )}
+          </div>
         </div>
       </td>
       <td className="px-3 py-3 text-xs text-zinc-700 dark:text-zinc-300" title={e.event_date ?? undefined}>
@@ -228,20 +248,35 @@ function EventRowView({ ev: e }: { ev: EventRow }) {
       <td className="px-3 py-3 text-xs text-zinc-700 dark:text-zinc-300" title={e.location ?? undefined}>
         <span className="line-clamp-2">{e.location ?? "—"}</span>
       </td>
+      <td className="px-3 py-3 text-xs text-zinc-600 dark:text-zinc-400" title={e.industry ?? undefined}>
+        <span className="line-clamp-2">{e.industry ?? "—"}</span>
+      </td>
       <td className="px-3 py-3 text-xs text-zinc-600 dark:text-zinc-400">
         <div className="space-y-1">
-          {e.event_type && (
+          {e.event_type ? (
             <div className="font-medium text-zinc-700 dark:text-zinc-300">{e.event_type}</div>
-          )}
-          {e.estimated_size && (
-            <div className="tabular-nums text-zinc-500 dark:text-zinc-400">{e.estimated_size}</div>
+          ) : (
+            <div className="text-zinc-400">—</div>
           )}
           {e.is_virtual && (
             <span className="inline-flex rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
               Virtual
             </span>
           )}
-          {!e.event_type && !e.estimated_size && !e.is_virtual && <span className="text-zinc-400">—</span>}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="space-y-1">
+          {e.estimated_size ? (
+            <div className="tabular-nums text-zinc-700 dark:text-zinc-300">{e.estimated_size}</div>
+          ) : (
+            <div className="text-zinc-400">—</div>
+          )}
+          {e.opportunity_score != null && (
+            <span className="inline-flex rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" title="10times opportunity score">
+              {Number(e.opportunity_score).toFixed(0)}
+            </span>
+          )}
         </div>
       </td>
       <td className="px-3 py-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400" title={e.score_rationale ?? undefined}>
